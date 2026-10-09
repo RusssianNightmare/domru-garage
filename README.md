@@ -30,3 +30,5 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+Прототип фич «Архив техники» и «Диагностика сети» для кейса Дом.ру (React + Vite + TS + Tailwind + qr-scanner)
