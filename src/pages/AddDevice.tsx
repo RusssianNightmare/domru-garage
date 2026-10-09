@@ -1,8 +1,9 @@
 import { useState, type ChangeEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Camera, X } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Camera, X, ReceiptText } from 'lucide-react';
 import {
   type Device,
+  type QrDraft,
   loadDevices,
   saveDevices,
   parseDateRu,
@@ -13,10 +14,15 @@ import {
 
 function AddDevice() {
   const navigate = useNavigate();
-  const [name, setName] = useState('');
-  const [purchaseDateRu, setPurchaseDateRu] = useState('');
-  const [warrantyMonths, setWarrantyMonths] = useState('');
-  const [photo, setPhoto] = useState<string | null>(null);
+  const location = useLocation();
+  const draft = (location.state ?? null) as QrDraft | null;
+
+  const [name, setName] = useState(draft?.name ?? '');
+  const [purchaseDateRu, setPurchaseDateRu] = useState(draft?.purchaseDateRu ?? '');
+  const [warrantyMonths, setWarrantyMonths] = useState(
+    draft?.warrantyMonths ? String(draft.warrantyMonths) : ''
+  );
+  const [photo, setPhoto] = useState<string | null>(draft?.photo ?? null);
   const [error, setError] = useState('');
 
   // АВТОРАСЧЁТ (требование ТЗ): дата покупки + срок = дата истечения
@@ -65,9 +71,29 @@ function AddDevice() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFD166] to-[#EF476F] p-4 pb-24">
       <h1 className="text-white text-2xl font-bold mb-4">дом.ру</h1>
-      <h2 className="text-gray-900 text-2xl font-extrabold mb-4">
+            <h2 className="text-gray-900 text-2xl font-extrabold mb-4">
         Добро пожаловать в архив техники от Дом.ру
       </h2>
+
+      {/* Баннер распознанного чека */}
+      {draft?.source === 'fns' && (
+        <div className="bg-white rounded-2xl p-4 mb-3 flex gap-3 items-start">
+          <ReceiptText size={20} className="text-gray-800 shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-800 font-medium">
+            Чек распознан: дата покупки
+            {draft.sum ? ` и сумма ${draft.sum.toLocaleString('ru-RU')} ₽` : ''} взяты
+            из QR-кода. Укажите название устройства и проверьте срок гарантии.
+          </p>
+        </div>
+      )}
+      {draft?.source === 'unknown' && (
+        <div className="bg-white rounded-2xl p-4 mb-3">
+          <p className="text-sm text-gray-800 font-medium">
+            Фото чека прикреплено из сканера. QR-код не содержит данных о покупке —
+            заполните поля вручную.
+          </p>
+        </div>
+      )}
 
       {/* Имя устройства */}
       <div className="bg-white rounded-2xl p-4 mb-3">

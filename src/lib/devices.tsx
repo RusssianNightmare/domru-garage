@@ -67,3 +67,44 @@ export const maskDateInput = (raw: string, prev: string): string => {
   if (digits.length > 2) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
   return digits;
 };
+
+// ---------- Распознавание QR чеков ----------
+export interface QrDraft {
+  name: string;
+  purchaseDateRu: string | null;
+  warrantyMonths: number | null;
+  sum: number | null;
+  photo: string | null;
+  source: 'domru' | 'fns' | 'unknown';
+}
+
+export const parseReceiptQr = (raw: string, photo: string | null): QrDraft => {
+  // Наш демо-формат: DOMRU-GARAGE|Название|дд.мм.гггг|месяцев
+  const parts = raw.split('|');
+  if (parts[0] === 'DOMRU-GARAGE' && parts.length >= 4) {
+    return {
+      name: parts[1],
+      purchaseDateRu: parts[2],
+      warrantyMonths: Number(parts[3]) || 12,
+      sum: null,
+      photo,
+      source: 'domru',
+    };
+  }
+  // Фискальный чек ФНС: t=20251002T1237&s=94999.00&fn=...
+  const tMatch = raw.match(/(?:^|[?&])t=(\d{8})T\d{4}/);
+  if (tMatch) {
+    const d = tMatch[1];
+    const sMatch = raw.match(/[?&]s=(\d+(?:[.,]\d+)?)/);
+    return {
+      name: '',
+      purchaseDateRu: `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}`,
+      warrantyMonths: 12,
+      sum: sMatch ? Math.round(Number(sMatch[1].replace(',', '.'))) : null,
+      photo,
+      source: 'fns',
+    };
+  }
+  // Чужой QR: сохраняем хотя бы фото чека
+  return { name: '', purchaseDateRu: null, warrantyMonths: 12, sum: null, photo, source: 'unknown' };
+};

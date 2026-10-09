@@ -152,8 +152,8 @@ function Garage() {
             return (
               <div key={dev.id} className="bg-[#F9DBDB] rounded-2xl p-4 flex gap-3">
                 {/* Информация об устройстве */}
-                <div className="flex-1">
-                  <p className="font-semibold text-gray-900 text-sm">Название: {dev.name}</p>
+                            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm break-words">Название: {dev.name}</p>
                   <p className="font-semibold text-gray-900 text-sm mt-2">
                     Гарантия истекает: {formatDateRu(w.expiryIso)}
                     {w.status === 'expired' && ' (истекла)'}

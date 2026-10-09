@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import QrScanner from 'qr-scanner';
 import { QrCode } from 'lucide-react';
-import { type Device, loadDevices, saveDevices, parseDateRu } from '../lib/devices';
-
+import { parseReceiptQr } from '../lib/devices';
 function QrScan() {
   const navigate = useNavigate();
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -12,31 +11,16 @@ function QrScan() {
   const [cameraError, setCameraError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // ---------- Добавление устройства из данных QR ----------
-  const addFromQr = (raw: string, photo: string | null) => {
-    let name = raw;
-    let purchaseDateRu = new Date().toLocaleDateString('ru-RU');
-    let warrantyMonths = 12;
-
-    // Ожидаемый формат QR: DOMRU-GARAGE|Название|дд.мм.гггг|месяцев
-    const parts = raw.split('|');
-    if (parts[0] === 'DOMRU-GARAGE' && parts.length >= 4) {
-      name = parts[1];
-      purchaseDateRu = parts[2];
-      warrantyMonths = Number(parts[3]) || 12;
-    }
-
-    const todayIso = new Date().toISOString().split('T')[0];
-    const device: Device = {
-      id: Date.now(),
-      name,
-      purchaseDate: parseDateRu(purchaseDateRu) ?? todayIso,
-      warrantyMonths,
-      receiptPhoto: photo, // снимок кадра камеры = "фото чека"
-    };
-    saveDevices([...loadDevices(), device]);
-    setSuccess(`Устройство «${name}» добавлено в архив!`);
-    setTimeout(() => navigate('/garage'), 1500);
+  // ---------- Распознали QR → черновик в форму добавления ----------
+  const handleRaw = (raw: string) => {
+    if (processedRef.current) return;
+    processedRef.current = true;
+    const photo = captureFrame();
+    scannerRef.current?.stop();
+    const draft = parseReceiptQr(raw, photo);
+    const hint = draft.purchaseDateRu ? `: покупка от ${draft.purchaseDateRu}` : '';
+    setSuccess(`Чек распознан${hint}. Проверьте данные`);
+    setTimeout(() => navigate('/garage/add', { state: draft }), 1500);
   };
 
   // ---------- Снимок кадра камеры (фото чека по ТЗ) ----------
@@ -58,12 +42,8 @@ function QrScan() {
 
     const scanner = new QrScanner(
       videoRef.current,
-      (result) => {
-        if (processedRef.current) return;
-        processedRef.current = true;
-        const photo = captureFrame();
-        scanner.stop();
-        addFromQr(result.data, photo);
+            (result) => {
+        handleRaw(result.data);
       },
       {
         highlightScanRegion: true,   // рамка зоны сканирования
@@ -82,12 +62,8 @@ function QrScan() {
   }, []);
 
   // ---------- Кнопка-страховка для защиты (если камера откажет) ----------
-  const demoScan = () => {
-    if (processedRef.current) return;
-    processedRef.current = true;
-    scannerRef.current?.stop();
-    addFromQr('DOMRU-GARAGE|Телевизор Android Compact-1|15.03.2025|24', null);
-  };
+   const demoScan = () =>
+    handleRaw('DOMRU-GARAGE|Телевизор Android Compact-1|15.03.2025|24');
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFD166] to-[#EF476F] p-4">
