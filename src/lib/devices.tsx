@@ -76,7 +76,45 @@ export interface QrDraft {
   sum: number | null;
   photo: string | null;
   source: 'domru' | 'fns' | 'unknown';
+  // откуда гарантия: 'qr' = реально из данных кода (демо-формат),
+  // 'default' = базовый дефолт, т.к. в fns-QR гарантии нет по 54-ФЗ
+  warrantySource: 'qr' | 'default';
 }
+
+// Базовая гарантия по умолчанию для электроники (в чеке её нет — см. 54-ФЗ)
+const DEFAULT_WARRANTY_MONTHS = 12;
+
+// Извлечение даты покупки из любого fns-QR (несколько форматов, чтобы не зависеть от одной кассы)
+const extractDateRu = (raw: string): string | null => {
+  // 1) строгий формат ФНС: t=20251002T1237 / t=20251002T123700
+  let m = raw.match(/(?:^|[?&;])t=(\d{8})T\d{4,6}/i);
+  if (m) {
+    const d = m[1];
+    return `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}`;
+  }
+  // 2) мягкий: t=20251002 (без времени или с слипнутым временем)
+  m = raw.match(/(?:^|[?&;])t=(\d{8})(?:\D|$)/);
+  if (m) {
+    const d = m[1];
+    return `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}`;
+  }
+  // 3) человеческий дд.мм.гггг / дд/мм/гггг (если сканировали не ссылочный QR)
+  m = raw.match(/(\d{2})[.\/](\d{2})[.\/](\d{4})/);
+  if (m) return `${m[1]}.${m[2]}.${m[3]}`;
+  // 4) ISO гггг-мм-дд
+  m = raw.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[3]}.${m[2]}.${m[1]}`;
+  return null;
+};
+
+const extractSum = (raw: string): number | null => {
+  const m = raw.match(/(?:^|[?&;])s=(\d+(?:[.,]\d+)?)/);
+  return m ? Math.round(Number(m[1].replace(',', '.'))) : null;
+};
+
+// признак «это чек ФНС»: фискальные реквизиты или домен nalog
+const isFnsQr = (raw: string): boolean =>
+  /(?:^|[?&;])(?:fn|fp)=\d{6,}|nalog\.ru/i.test(raw);
 
 export const parseReceiptQr = (raw: string, photo: string | null): QrDraft => {
   // Наш демо-формат: DOMRU-GARAGE|Название|дд.мм.гггг|месяцев
@@ -85,26 +123,37 @@ export const parseReceiptQr = (raw: string, photo: string | null): QrDraft => {
     return {
       name: parts[1],
       purchaseDateRu: parts[2],
-      warrantyMonths: Number(parts[3]) || 12,
+      warrantyMonths: Number(parts[3]) || DEFAULT_WARRANTY_MONTHS,
       sum: null,
       photo,
       source: 'domru',
+      warrantySource: 'qr', // срок реально зашит в демо-код
     };
   }
-  // Фискальный чек ФНС: t=20251002T1237&s=94999.00&fn=...
-  const tMatch = raw.match(/(?:^|[?&])t=(\d{8})T\d{4}/);
-  if (tMatch) {
-    const d = tMatch[1];
-    const sMatch = raw.match(/[?&]s=(\d+(?:[.,]\d+)?)/);
+
+  // Любой фискальный чек ФНС: дата и сумма — авто; гарантии в QR нет
+  const dateRu = extractDateRu(raw);
+  const sum = extractSum(raw);
+  if (isFnsQr(raw) || dateRu || sum !== null) {
     return {
       name: '',
-      purchaseDateRu: `${d.slice(6, 8)}.${d.slice(4, 6)}.${d.slice(0, 4)}`,
-      warrantyMonths: 12,
-      sum: sMatch ? Math.round(Number(sMatch[1].replace(',', '.'))) : null,
+      purchaseDateRu: dateRu,
+      warrantyMonths: DEFAULT_WARRANTY_MONTHS, // дефолт, НЕ из чека
+      sum,
       photo,
       source: 'fns',
+      warrantySource: 'default',
     };
   }
+
   // Чужой QR: сохраняем хотя бы фото чека
-  return { name: '', purchaseDateRu: null, warrantyMonths: 12, sum: null, photo, source: 'unknown' };
+  return {
+    name: '',
+    purchaseDateRu: null,
+    warrantyMonths: DEFAULT_WARRANTY_MONTHS,
+    sum: null,
+    photo,
+    source: 'unknown',
+    warrantySource: 'default',
+  };
 };

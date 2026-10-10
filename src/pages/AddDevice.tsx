@@ -75,22 +75,24 @@ function AddDevice() {
         Добро пожаловать в архив техники от Дом.ру
       </h2>
 
-      {/* Баннер распознанного чека */}
+          {/* Баннер распознанного чека */}
       {draft?.source === 'fns' && (
         <div className="bg-white rounded-2xl p-4 mb-3 flex gap-3 items-start">
           <ReceiptText size={20} className="text-gray-800 shrink-0 mt-0.5" />
           <p className="text-sm text-gray-800 font-medium">
-            Чек распознан: дата покупки
-            {draft.sum ? ` и сумма ${draft.sum.toLocaleString('ru-RU')} ₽` : ''} взяты
-            из QR-кода. Укажите название устройства и проверьте срок гарантии.
+            {draft.purchaseDateRu
+              ? <>Дата покупки{draft.sum ? ` и сумма ${draft.sum.toLocaleString('ru-RU')} ₽` : ''} — из QR‑кода. </>
+              : <>Сумма{draft.sum ? ` ${draft.sum.toLocaleString('ru-RU')} ₽` : ''} — из QR‑кода, дату введите вручную. </>}
+            Гарантийный срок в чеке <b>не указан</b> (это условие производителя, его нет в фискальном QR по 54‑ФЗ),
+            поэтому подставлен базовый {draft.warrantyMonths} мес — проверьте по документам и измените при необходимости.
           </p>
         </div>
       )}
       {draft?.source === 'unknown' && (
         <div className="bg-white rounded-2xl p-4 mb-3">
           <p className="text-sm text-gray-800 font-medium">
-            Фото чека прикреплено из сканера. QR-код не содержит данных о покупке —
-            заполните поля вручную.
+            Фото чека прикреплено из сканера. QR‑код не распознан как фискальный чек —
+            заполните дату и название вручную. Гарантия по умолчанию {draft.warrantyMonths} мес (в чеке её нет).
           </p>
         </div>
       )}
