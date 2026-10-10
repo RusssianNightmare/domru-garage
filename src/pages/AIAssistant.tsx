@@ -51,6 +51,58 @@ const botReply = (q: string): Omit<Msg, 'id' | 'from'> => {
   };
 };
 
+
+// ---------- Реальная НН: YandexGPT через прокси Netlify ----------
+const askLLM = async (question: string): Promise<string | null> => {
+  const lastNet = localStorage.getItem('domru_last_net');
+  let ctx = 'данных о последней диагностике нет';
+  if (lastNet) {
+    try {
+      const n = JSON.parse(lastNet) as { incoming: number; ping: number };
+      ctx = `последняя диагностика: входящая ${n.incoming} Мбит/с, пинг ${n.ping} мс`;
+    } catch {
+      /* игнорируем битый JSON */
+    }
+  }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch('/.netlify/functions/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, context: ctx }),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    const data = (await res.json()) as { text?: string };
+    const text = (data.text ?? '').trim();
+    return text.length > 0 ? text : null;
+  } catch {
+    return null; // НН недоступна → фолбэк на бота по ТЗ
+  }
+};
+
+// Ответ НН → Msg; гиперссылка в каталог гарантирована ТЗ
+const llmToMsg = (text: string): Omit<Msg, 'id' | 'from'> => {
+  const marker = '[[CATALOG]]';
+  if (text.includes(marker)) {
+    const [before, after = ''] = text.split(marker);
+    return {
+      before: before.trim() + ' ',
+      linkLabel: 'каталог Дом.ру',
+      linkTo: '/catalog',
+      after: after.trim(),
+    };
+  }
+  return {
+    before: text.trim() + ' Если нужно оборудование, смотрите ',
+    linkLabel: 'роутер Дом.ру Wave в каталоге',
+    linkTo: '/catalog',
+    after: '.',
+  };
+};
+
 // ---------- Первое сообщение: диагноз по последней диагностике ----------
 const firstMessage = (): Msg => {
   let incoming: number | null = null;
@@ -106,16 +158,16 @@ function AIAssistant() {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, typing]);
 
-  const send = (raw?: string) => {
+  const send = async (raw?: string) => {
     const q = (raw ?? input).trim();
     if (!q || typing) return;
     setMessages((m) => [...m, { id: Date.now(), from: 'user', before: q }]);
     setInput('');
     setTyping(true);
-    setTimeout(() => {
-      setMessages((m) => [...m, { ...botReply(q), id: Date.now() + 1, from: 'bot' }]);
-      setTyping(false);
-    }, 900);
+    const llmText = await askLLM(q); // реальный YandexGPT, таймаут 12 сек
+    const reply = llmText ? llmToMsg(llmText) : botReply(q); // страховка по ТЗ
+    setMessages((m) => [...m, { ...reply, id: Date.now() + 1, from: 'bot' }]);
+    setTyping(false);
   };
 
   return (
