@@ -62,8 +62,18 @@ function QrScan() {
   }, []);
 
   // ---------- Кнопка-страховка для защиты (если камера откажет) ----------
-   const demoScan = () =>
+     // ---------- Страховка для защиты (если камера откажет) ----------
+  const demoScan = () =>
     handleRaw('DOMRU-GARAGE|Телевизор Android Compact-1|15.03.2025|24');
+
+  // Скрытый триггер: ссылка с ?demo=1 (видимой кнопки нет)
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('demo') === '1') {
+      const t = setTimeout(() => demoScan(), 600);
+      return () => clearTimeout(t);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFD166] to-[#EF476F] p-4">
@@ -103,14 +113,6 @@ function QrScan() {
         className="w-full bg-white rounded-2xl p-4 mb-3 text-sm font-medium text-gray-800 active:scale-95 transition-transform"
       >
         Перейти к моим устройствам
-      </button>
-
-      {/* Страховка для демо: имитация успешного скана */}
-      <button
-        onClick={demoScan}
-        className="w-full text-white/70 text-xs underline py-2"
-      >
-        (демо-режим) Симулировать успешное сканирование
       </button>
     </div>
   );

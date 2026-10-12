@@ -7,6 +7,9 @@ import QrScan from './pages/QrScan';
 import Diagnostics from './pages/Diagnostics';
 import AIAssistant from './pages/AIAssistant';
 import Catalog from './pages/Catalog';
+import Profile from './pages/Profile';
+import SmartHome from './pages/SmartHome';
+import BottomNav from './components/BottomNav';
 
 function App() {
   return (
@@ -14,6 +17,7 @@ function App() {
       {/* Телефонная рамка: на ПК — узкая колонка как в Figma, на телефоне — весь экран */}
       <div className="min-h-screen bg-gray-300 flex justify-center">
         <div className="w-full max-w-md min-h-screen bg-white shadow-2xl relative">
+          <BottomNav />
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/garage" element={<Garage />} />
@@ -23,11 +27,12 @@ function App() {
             <Route path="/diagnostics" element={<Diagnostics />} />
             <Route path="/ai-assistant" element={<AIAssistant />} />
             <Route path="/catalog" element={<Catalog />} />
+            <Route path="/smart-home" element={<SmartHome />} />
+            <Route path="/profile" element={<Profile />} />
           </Routes>
         </div>
       </div>
     </Router>
   );
 }
-
 export default App;

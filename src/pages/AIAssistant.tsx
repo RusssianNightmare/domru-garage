@@ -148,11 +148,23 @@ const firstMessage = (): Msg => {
 };
 
 function AIAssistant() {
-  const navigate = useNavigate();
-  const [messages, setMessages] = useState<Msg[]>(() => [firstMessage()]);
-  const [input, setInput] = useState('');
-  const [typing, setTyping] = useState(false);
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+const navigate = useNavigate();
+const [messages, setMessages] = useState<Msg[]>(() => [firstMessage()]);
+const [input, setInput] = useState('');
+const [typing, setTyping] = useState(false);
+const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Если пришли из каталога с готовым вопросом — автоматически отправляем его
+  const askedRef = useRef(false);
+  useEffect(() => {
+    if (askedRef.current) return;
+    const q = (window.history.state as any)?.usr?.question as string | undefined;
+    if (q) {
+      askedRef.current = true;
+      setTimeout(() => send(q), 400);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -181,7 +193,7 @@ function AIAssistant() {
       </div>
 
       {/* Лента сообщений */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
+         <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-44">
         {messages.map((m) =>
           m.from === 'bot' ? (
             <div key={m.id} className="bg-white rounded-2xl p-4 max-w-[90%] shadow">
@@ -214,7 +226,7 @@ function AIAssistant() {
       </div>
 
       {/* Быстрые вопросы (удобно на защите) */}
-      <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-md px-4 flex gap-2 overflow-x-auto">
+         <div className="fixed bottom-32 left-1/2 -translate-x-1/2 w-full max-w-md px-4 flex gap-2 overflow-x-auto z-30">
         {['Почему тормозит интернет?', 'Какой роутер выбрать?', 'Как получить скидку?'].map((q) => (
           <button
             key={q}
@@ -227,7 +239,7 @@ function AIAssistant() {
       </div>
 
       {/* Поле ввода */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white p-3 border-t border-gray-200 flex gap-2">
+         <div className="fixed bottom-16 left-1/2 -translate-x-1/2 w-full max-w-md bg-white p-3 border-t border-gray-200 flex gap-2 z-30">
         <input
           type="text"
           value={input}

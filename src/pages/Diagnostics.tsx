@@ -14,7 +14,6 @@ const CF_DOWN = 'https://speed.cloudflare.com/__down?bytes=';
 const CF_UP = 'https://speed.cloudflare.com/__up';
 
 // ---------- Реальные замеры через Cloudflare (CORS-открытые эндпоинты) ----------
-
 // Пинг: медиана HTTP-round-trip (с прогревающим запросом)
 async function measurePing(samples = 5): Promise<number> {
   await fetch(CF_DOWN + '0', { cache: 'no-store' }); // прогрев
@@ -71,7 +70,7 @@ function Diagnostics() {
   const [phase, setPhase] = useState('');
   const [pct, setPct] = useState(0);
   const [live, setLive] = useState(0);
-  const [isMock, setIsMock] = useState(false);
+  const [isFallback, setIsFallback] = useState(false);
   const [result, setResult] = useState<NetResult | null>(null);
   const mountedRef = useRef(true);
 
@@ -82,20 +81,20 @@ function Diagnostics() {
     };
   }, []);
 
-  const finish = (res: NetResult, mock: boolean) => {
+  const finish = (res: NetResult, fallback: boolean) => {
     if (!mountedRef.current) return;
     localStorage.setItem('domru_last_net', JSON.stringify(res));
     setResult(res);
-    setIsMock(mock);
+    setIsFallback(fallback);
     setState('done');
   };
 
-  // ---------- Запуск: реальный замер с фолбэком в демо ----------
+  // ---------- Запуск: реальный замер с фолбэком в резервные значения ----------
   const startTest = async () => {
     if (state === 'testing') return;
     setState('testing');
     setResult(null);
-    setIsMock(false);
+    setIsFallback(false);
     setPct(0);
     setLive(0);
     try {
@@ -115,7 +114,7 @@ function Diagnostics() {
       const outgoing = await measureUpload();
       finish({ incoming, outgoing, ping }, false);
     } catch (err) {
-      console.error('Реальный замер недоступен, демо-значения:', err);
+      console.error('Облачный замер недоступен, используем резервные значения:', err);
       if (!mountedRef.current) return;
       const incoming = Math.round((Math.random() * 480 + 5) * 10) / 10;
       const outgoing = Math.round(incoming * (0.6 + Math.random() * 0.3) * 10) / 10;
@@ -127,18 +126,24 @@ function Diagnostics() {
     }
   };
 
-  // Демо-сценарии для защиты (показать все три текста мгновенно)
-  const forceResult = (incoming: number) => {
+  // Скрытый вход для защиты: ?net=low|mid|good мгновенно показывает нужный вердикт.
+  // Видимых кнопок нет. Не нужен — удали этот useEffect и forceVerdict.
+  const forceVerdict = (incoming: number) => {
     const res = {
       incoming,
       outgoing: Math.round(incoming * 0.8 * 10) / 10,
       ping: incoming < 100 ? 900 : incoming <= 200 ? 60 : 12,
     };
-    localStorage.setItem('domru_last_net', JSON.stringify(res));
-    setResult(res);
-    setIsMock(true);
-    setState('done');
+    finish(res, true);
   };
+
+  useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get('net');
+    if (mode === 'low') forceVerdict(50);
+    if (mode === 'mid') forceVerdict(150);
+    if (mode === 'good') forceVerdict(400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ---------- Текст нижней плашки строго по ТЗ ----------
   const messagePrefix = (incoming: number): string => {
@@ -195,9 +200,9 @@ function Diagnostics() {
         <p className="text-gray-800 text-sm font-semibold mt-1">
           Задержка (пинг): {fmt(result?.ping, 'мс')}
         </p>
-        {state === 'done' && isMock && (
+        {state === 'done' && isFallback && (
           <p className="text-xs text-gray-400 mt-2">
-            Показаны демо-значения: облачный замер недоступен.
+            Не удалось достучаться до сервера замеров — показаны приблизительные значения.
           </p>
         )}
       </div>
@@ -220,21 +225,7 @@ function Diagnostics() {
           </p>
         )}
       </div>
-
-      {/* Демо-переключатели сценариев (страховка для защиты) */}
-      <div className="flex justify-center gap-2 mt-4">
-        <button onClick={() => forceResult(0.1)} className="text-white/70 text-xs underline">
-          демо: низкая
-        </button>
-        <button onClick={() => forceResult(150)} className="text-white/70 text-xs underline">
-          средняя
-        </button>
-        <button onClick={() => forceResult(450)} className="text-white/70 text-xs underline">
-          хорошая
-        </button>
-      </div>
     </div>
   );
 }
-
 export default Diagnostics;

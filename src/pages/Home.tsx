@@ -49,15 +49,25 @@ function Home() {
         </button>
       </div>
 
-      {/* Баннер умных устройств */}
-      <div className="bg-white/20 backdrop-blur rounded-2xl p-4">
-        <h3 className="text-white font-bold mb-2">Умные устройства для вашего дома</h3>
-        <div className="flex gap-2 text-3xl">
-          <span>📡</span>
-          <span>📷</span>
-          <span></span>
-        </div>
-      </div>
+                {/* Умные устройства для вашего дома */}
+      <h2 className="text-white text-lg font-extrabold mb-3 mt-6">
+        Умные устройства для вашего дома
+      </h2>
+      <button
+        onClick={() => navigate('/smart-home')}
+        className="w-full bg-white rounded-2xl p-3 border border-gray-200 shadow-md flex items-center gap-3 active:scale-[0.98] transition-transform"
+      >
+        <span className="bg-gray-100 rounded-xl h-14 w-14 flex items-center justify-center text-2xl shrink-0">
+          📡
+        </span>
+        <span className="bg-gray-100 rounded-xl h-14 w-14 flex items-center justify-center text-2xl shrink-0">
+          📷
+        </span>
+        <span className="flex-1 text-left text-sm font-semibold text-gray-800">
+          Камеры, роутеры и датчики — смотреть все
+        </span>
+        <span className="text-gray-400 text-xl">›</span>
+      </button>
 
       {/* Нижнее меню навигации */}
       <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 p-2 flex justify-around">
