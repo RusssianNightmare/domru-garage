@@ -1,34 +1,47 @@
-# React + TypeScript + Vite
+# Мой Дом.ру — прототип для хакатон-кейса Дом.ру
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Команда «Замороженные лютики»
 
-Currently, two official plugins are available:
+Живое демо: https://domru-garage-with-ai.netlify.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## О проекте
+Прототип мобильного приложения провайдера, который даёт пользу пользователю
+ДО заключения договора — и за счёт этого привлекает новых клиентов.
 
-## React Compiler
+### Фичи
+-  Архив техники — цифровой гараж устройств и гарантий:
+  - скан QR фискального чека (54-ФЗ) с автоподстановкой даты и суммы
+  - парсер поддерживает 4 формата даты (строгий `t=YYYYMMDDTHHMM`, мягкий,
+    человеческий дд.мм.гггг и ISO) — не зависит от конкретной кассы
+  - авторасчёт истечения гарантии = дата покупки + срок
+  - фото чека прикрепляется к карточке устройства
+  - ручное добавление для любых магазинов
+-  Диагностика сети — реальный замер через CORS-открытые эндпоинты Cloudflare:
+  - медиана пинга (5 проб), потоковое скачивание с прогрессом, отдача 5 МБ
+  - вердикт по порогам ТЗ (низкая / средняя / хорошая)
+  - передача результата ИИ-помощнику как контекст разговора
+  - честный фолбэк на резервные значения, если облако недоступно
+- ИИ-помощь — YandexGPT (Yandex Cloud Foundation Models) через
+  серверлесс-прокси Netlify Functions:
+  - API-ключ изолирован в env-переменных сервера, не попадает ни в репозиторий,
+    ни в бандл фронтенда
+  - телеком-контекст: модель знает последнюю диагностику пользователя
+  - обязательная гиперссылка в каталог (маркер `[[CATALOG]]` в промпте)
+  - фолбэк — детерминированный бот по ключевым словам из ТЗ
+- Каталог и умные устройства — корзина, скидка 20% по договору,
+  кнопка «Спросить ИИ» про модель с переходом в чат с готовым вопросом
+- Дом.ру ID — профиль с живыми данными из localStorage:
+  число устройств в архиве, последний замер сети
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Стек
+- Frontend: React 18, Vite, TypeScript, Tailwind CSS, react-router-dom
+- Сканер: `qr-scanner` (WebAssembly, работает офлайн в браузере)
+- Иконки: lucide-react
+- Бэкенд: Netlify Functions (прокси к YandexGPT)
+- Хранение: localStorage (устройства, последний замер, профиль)
+- **Деплой: Netlify, continuous deployment из ветки `main`
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
-
-Прототип фич «Архив техники» и «Диагностика сети» для кейса Дом.ру (React + Vite + TS + Tailwind + qr-scanner)
+## Запуск локально
+```bash
+npm install
+npm run dev
